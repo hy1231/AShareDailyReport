@@ -1,0 +1,6 @@
+google-genai
+efinance
+pandas
+plotly
+jinja2
+python-dotenv
