@@ -17,6 +17,8 @@ def main():
     viz = Visualizer()
     chart_html = viz.generate_industry_treemap()
 
+    # 创建本地ai记忆库，每次喂给ai
+
     # 3. AI 分析 (可选)
     analyst = AIAnalyst(api_key=os.getenv("AI_API_KEY"))
     ai_review = analyst.get_market_review(market_data)
