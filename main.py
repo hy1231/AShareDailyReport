@@ -4,6 +4,11 @@ from jinja2 import Template
 from src.collector import DataCollector
 from src.visualizer import Visualizer
 from src.analyst import AIAnalyst
+from src import settings
+
+import urllib.request
+urllib.request.getproxies = lambda: {}
+
 
 load_dotenv()
 
@@ -20,7 +25,7 @@ def main():
     # 创建本地ai记忆库，每次喂给ai
 
     # 3. AI 分析 (可选)
-    analyst = AIAnalyst(api_key=os.getenv("AI_API_KEY"))
+    analyst = AIAnalyst()
     ai_review = analyst.get_market_review(market_data)
 
     # 4. 渲染 Markdown

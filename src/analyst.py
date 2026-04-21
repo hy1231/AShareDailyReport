@@ -1,16 +1,25 @@
 from google import genai
 from google.genai import types
-import os
-
+from src import settings
+import httpx
 class AIAnalyst:
-    def __init__(self, api_key):
+    def __init__(self):
         # 初始化最新的 Google GenAI 客户端
-        self.client = genai.Client(api_key=api_key)
-        # 推荐使用 gemini-3-flash，响应极快且对结构化数据理解能力极强
-        self.model_id = "gemini-3-flash" 
+        self.http_client = httpx.Client(
+                proxies=settings.GEMINI_PROXY,
+                timeout=30.0  # 稍微延长超时，防止网络波动
+            )
+
+        self.client = genai.Client(
+            api_key=settings.GOOGLE_API_KEY,
+            http_client=self.http_client # <--- 这一步是灵魂
+        )
+
+        #self.client = genai.Client(api_key=settings.GOOGLE_API_KEY)
+        self.model_id = settings.MODEL_ID
 
     def get_market_review(self, market_data):
-        """调用 Gemini 3 进行深度复盘"""
+        """调用 Gemini 进行深度复盘"""
         prompt = f"""
         你是一位身经百战的 A 股首席策略分析师。
         请根据以下今日市场数据，撰写一份结构清晰、见解深刻的 Markdown 复盘简报。
