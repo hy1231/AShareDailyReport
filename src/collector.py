@@ -91,3 +91,55 @@ class DataCollector:
         except Exception as e:
             print(f"❌ 数据处理失败: {e}")
             return None
+
+    def get_top_industries(self):
+        """
+        获取行业板块排行（同样支持原始数据缓存）
+        """
+        raw_industry_cache = os.path.join(self.cache_dir, f"raw_industries_{self.today}.json")
+
+        # 1. 检查缓存
+        if os.path.exists(raw_industry_cache):
+            print(f"📦 [Cache] 发现行业原始数据，直接加载...")
+            with open(raw_industry_cache, 'r', encoding='utf-8') as f:
+                raw_data = json.load(f)
+        else:
+            # 2. 抓取东财行业板块接口
+            # fs=m:90+t:2 代表行业板块
+            print("🌐 [Network] 正在采集行业板块数据...")
+            url = "http://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=100&po=1&np=1&fltt=2&invt=2&fid=f3&fs=m:90+t:2&fields=f12,f14,f3,f6"
+            
+            try:
+                response = requests.get(url, impersonate="chrome120", timeout=15)
+                if response.status_code == 200:
+                    raw_data = response.json()
+                    with open(raw_industry_cache, 'w', encoding='utf-8') as f:
+                        json.dump(raw_data, f, ensure_ascii=False, indent=4)
+                else:
+                    return []
+            except Exception as e:
+                print(f"❌ 行业数据采集异常: {e}")
+                return []
+
+        # 3. 处理数据
+        return self._process_industry_data(raw_data)
+
+    def _process_industry_data(self, raw_data):
+        """
+        将行业原始 JSON 转换为可视化所需的格式
+        """
+        try:
+            items = raw_data['data']['diff']
+            df = pd.DataFrame(items)
+            df.rename(columns={'f14': '行业名称', 'f3': '涨跌幅', 'f6': '总成交额'}, inplace=True)
+            
+            # 清洗
+            df['涨跌幅'] = pd.to_numeric(df['涨跌幅'], errors='coerce').fillna(0)
+            
+            # 只取前 15 个热门行业或者涨幅居前的，防止图表太乱
+            top_df = df.nlargest(15, '涨跌幅')
+            
+            return top_df.to_dict('records')
+        except Exception as e:
+            print(f"❌ 行业数据处理失败: {e}")
+            return []

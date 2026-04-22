@@ -15,12 +15,22 @@ load_dotenv()
 def main():
     # 1. 采集数据
     collector = DataCollector()
-    market_data = collector.get_market_sentiment()
+
+    # 采集/读取今日市场整体数据
+    market_data = collector.get_market_sentiment() 
+
+    # 增加防御：如果抓取失败，停止后续操作
+    if not market_data or 'raw_df' not in market_data:
+        print("🛑 关键数据 (market_data) 缺失，停止生成日报。")
+        return
+
+
+    # 采集/读取今日行业领涨数据
     industries = collector.get_top_industries()
 
     # 增加防御：如果抓取失败，停止后续操作
-    if not market_data.get('raw_data'):
-        print("🛑 关键数据缺失，停止生成日报。")
+    if not industries:
+        print("🛑 关键数据 (market_data) 缺失，停止生成日报。")
         return
 
 
