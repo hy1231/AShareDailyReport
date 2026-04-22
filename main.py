@@ -18,9 +18,15 @@ def main():
     market_data = collector.get_market_sentiment()
     industries = collector.get_top_industries()
 
+    # 增加防御：如果抓取失败，停止后续操作
+    if not market_data.get('raw_data'):
+        print("🛑 关键数据缺失，停止生成日报。")
+        return
+
+
     # 2. 生成交互图表
-    viz = Visualizer()
-    chart_html = viz.generate_industry_treemap()
+    # viz = Visualizer()
+    # chart_html = viz.generate_industry_treemap()
 
     # 创建本地ai记忆库，每次喂给ai
 
@@ -37,8 +43,8 @@ def main():
         up=market_data['up'],
         down=market_data['down'],
         volume=market_data['volume'],
-        chart_html=chart_html,
-        ai_review=ai_review
+        #chart_html=chart_html,
+        #ai_review=ai_review
     )
 
     # 5. 保存结果
