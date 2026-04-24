@@ -47,3 +47,6 @@ Thumbs.db
 *.log
 *.png
 *.html
+
+## 缓存文件
+cache

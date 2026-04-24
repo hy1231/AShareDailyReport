@@ -12,6 +12,27 @@ urllib.request.getproxies = lambda: {}
 
 load_dotenv()
 
+
+
+def prepare_market_snapshot(raw_df):
+    # 1. 涨幅榜 Top 10
+    top_gainers = raw_df.nlargest(10, '涨跌幅')[['名称', '涨跌幅', '成交额']]
+    
+    # 2. 跌幅榜 Top 10
+    top_losers = raw_df.nsmallest(10, '涨跌幅')[['名称', '涨跌幅', '成交额']]
+    
+    # 3. 成交额榜 Top 10 (衡量权重股动向)
+    top_volume = raw_df.nlargest(10, '成交额')[['名称', '涨跌幅', '成交额']]
+    
+    return {
+        "gainers": top_gainers.to_dict('records'),
+        "losers": top_losers.to_dict('records'),
+        "active": top_volume.to_dict('records')
+    }
+
+
+
+
 def main():
     # 1. 采集数据
     collector = DataCollector()
@@ -26,17 +47,21 @@ def main():
 
 
     # 采集/读取今日行业领涨数据
-    industries = collector.get_top_industries()
+    full_industries = collector.get_top_industries()
 
     # 增加防御：如果抓取失败，停止后续操作
-    if not industries:
+    if not full_industries:
         print("🛑 关键数据 (market_data) 缺失，停止生成日报。")
         return
 
 
     # 2. 生成交互图表
-    # viz = Visualizer()
-    # chart_html = viz.generate_industry_treemap()
+
+    # 绘图用全量
+    treemap_html = Visualizer.generate_industry_treemap(full_industries)
+    # 给 AI 点评用前 10 名
+    top_10_for_ai = full_industries[:10]
+
 
     # 创建本地ai记忆库，每次喂给ai
 
