@@ -1,18 +1,21 @@
-# 📈 A-Canvas 每日市场看板 | {{ date }}
+# 🚀 A 股市场复盘简报 ({{ date }})
 
-## 🌡️ 市场温度
-- **上涨/下跌：** <span style="color:red">{{ up }}</span> / <span style="color:green">{{ down }}</span>
-- **全天成交：** `{{ volume }} 亿`
-- **赚钱效应：** {{ "极佳" if up > down * 2 else "一般" }}
-
----
-
-## 🗺️ 板块资金流向 (交互式)
-{{ chart_html }}
+### 📊 市场全局快照
+- **上涨家数**：{{ up }}
+- **下跌家数**：{{ down }}
+- **全天成交**：{{ volume }}
 
 ---
 
-## 🤖 AI 深度复盘
+### 🧠 首席分析师 AI 研判
 {{ ai_review }}
 
 ---
+
+### 📈 板块资金热力分布
+> 请在支持 HTML 渲染的编辑器（如 VS Code 预览）或浏览器中查看图表。
+
+{{ chart_html }}
+
+---
+*本报告由 A-Canvas 自动化系统生成*

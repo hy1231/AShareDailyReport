@@ -78,6 +78,7 @@ class DataCollector:
                 # 这个接口返回 49 个一级行业，反爬最松
                 df = ak.stock_sector_spot()
                 df.to_csv(raw_ind_cache, index=False, encoding='utf-8-sig')
+                print(f"💾 [Storage] 行业板块行情原始数据已备份: {raw_ind_cache}")
             except Exception as e:
                 print(f"❌ 行业抓取失败: {e}")
                 return []

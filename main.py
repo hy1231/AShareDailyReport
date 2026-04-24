@@ -67,8 +67,6 @@ def main():
 
     # 创建本地ai记忆库，每次喂给ai
 
-
-
     # 构造传给 AI 的增强版数据包
     stock_insights = prepare_stock_insights(market_data['raw_df'])
     ai_input_data = {
@@ -86,25 +84,32 @@ def main():
     # 同时传入宏观情报包和行业列表
     review_markdown = analyst.get_market_review(ai_input_data, full_industries)
 
-
-    # 4. 渲染 Markdown
+    # 渲染 Markdown
     with open('templates/report_template.md', 'r', encoding='utf-8') as f:
         tmpl = Template(f.read())
-    
+
+    # 开始注入数据
     final_report = tmpl.render(
-        date=market_data['date'],
+        # 基础宏观数据
+        date=market_data['date'], 
         up=market_data['up'],
         down=market_data['down'],
         volume=market_data['volume'],
-        #chart_html=chart_html,
-        #ai_review=ai_review
+        
+        # 核心分析：把 AI 写好的 Markdown 文案传进去
+        ai_review=review_markdown,
+        
+        # 可视化图表：把 Plotly 生成的 HTML 片段传进去
+        chart_html=treemap_html
     )
 
-    # 5. 保存结果
-    with open(f"output/report_{market_data['date']}.md", 'w', encoding='utf-8') as f:
+    # 保存最终报告
+    output_filename = f"reports/A股深度复盘_{market_data['date']}.md"
+    with open(output_filename, 'w', encoding='utf-8') as f:
         f.write(final_report)
-    
-    print(f"✅ 日报已生成：output/report_{market_data['date']}.md")
+
+    print(f"🎉 报告生成成功：{output_filename}")
+
 
 if __name__ == "__main__":
     main()
