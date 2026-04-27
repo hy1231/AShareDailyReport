@@ -67,14 +67,14 @@ class AIAnalyst:
 """
 
         # 调试开关，或者直接打印
-        print(f"🚀 [Debug] 正在请求 Gemini ({self.model_id})...")
-        print(f"📊 宏观数据日期: {market_data.get('date')}")
-        print(f"📈 传入行业数量: {len(industry_data)}")
+        # print(f"🚀 [Debug] 正在请求 Gemini ({self.model_id})...")
+        # print(f"📊 宏观数据日期: {market_data.get('date')}")
+        # print(f"📈 传入行业数量: {len(industry_data)}")
         
-        # 打印完整的 Prompt 方便检查格式
-        print("-" * 50)
-        print(prompt)
-        print("-" * 50)
+        # # 打印完整的 Prompt 方便检查格式
+        # print("-" * 50)
+        # print(prompt)
+        # print("-" * 50)
 
         try:
             response = self.client.models.generate_content(
@@ -82,8 +82,7 @@ class AIAnalyst:
                 contents=prompt,
                 config=types.GenerateContentConfig(
                     temperature=0.7,
-                    top_p=0.95,
-                    max_output_tokens=2048
+                    top_p=0.95
                 )
             )
             

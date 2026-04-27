@@ -44,34 +44,27 @@ def main():
     if not market_data or 'raw_df' not in market_data:
         print("🛑 关键数据缺失，停止生成日报。")
         return
-
+    if not market_data or 'raw_df' not in market_data: return
+    
     full_industries = collector.get_top_industries()
     if not full_industries:
         print("🛑 行业数据缺失，停止生成日报。")
         return
-
-    # 2. 生成图表
-    # 注意：建议修改 Visualizer 类，让它先返回 fig 对象，方便同时保存 HTML 和图片
-    # 这里我们假设你已经按建议修改了 Visualizer，或者直接在这里处理
-    
-    # 获取 plotly 的 fig 对象
-    fig = Visualizer.generate_industry_treemap(full_industries) # 建议新增这个方法返回 fig
-    
-    # 保存为 HTML (留着本地看)
-    #treemap_html = fig.to_html(full_html=False, include_plotlyjs='cdn')
-    
-    # 保存为静态图片 (给公众号用)
-    # 我们把图片存放在 output/images/ 目录下
     date_str = market_data['date']
-    image_dir = "output/images"
-    os.makedirs(image_dir, exist_ok=True)
-    image_path = f"{image_dir}/hotmap_{date_str}.png"
-    
-    # 使用 kaleido 引擎保存图片
-    fig.write_image(image_path, scale=2) 
-    print(f"📸 静态图片已生成: {image_path}")
 
-    # 3. 构造 AI 输入并获取分析 (   后续添加： # 创建本地ai记忆库，每次喂给ai)
+    # 2. 生成图表并存入缓存 (data/cache)
+    fig = Visualizer.generate_industry_treemap(full_industries) 
+    
+    cache_dir = "data/cache"
+    os.makedirs(cache_dir, exist_ok=True)
+    image_filename = f"hotmap_{date_str}.png"
+    image_cache_path = f"{cache_dir}/{image_filename}"
+    
+    # 保存图片到缓存（如果追求极致，这里可以加个 os.path.exists 判断，存在就不重写）
+    fig.write_image(image_cache_path, scale=2) 
+    print(f"📸 静态图片已缓存至: {image_cache_path}")
+
+    # 3. 构造 AI 输入并获取分析
     stock_insights = prepare_stock_insights(market_data['raw_df'])
     ai_input_data = {
         "date": date_str,
@@ -88,10 +81,7 @@ def main():
     # 4. 渲染 Markdown
     with open('templates/report_template.md', 'r', encoding='utf-8') as f:
         tmpl = Template(f.read())
-
-    # 计算图片相对于 .md 文件的路径 (为了在预览时能看到图)
-    # 因为 .md 在 output/，图片在 output/images/，所以相对路径是 images/xxx.png
-    rel_image_path = f"images/hotmap_{date_str}.png"
+    rel_image_path = f"../data/cache/{image_filename}"
 
     final_report = tmpl.render(
         date=date_str, 
@@ -99,11 +89,10 @@ def main():
         down=market_data['down'],
         volume=market_data['volume'],
         ai_review=review_markdown,
-        # 传递图片路径，对应模板里的 ![今日 A 股热力图]({{ chart_image_path }})
         chart_image_path=rel_image_path
     )
 
-    # 5. 保存最终报告
+    # 5. 保存最终报告到 output
     output_filename = f"output/A股深度复盘_{date_str}.md"
     with open(output_filename, 'w', encoding='utf-8') as f:
         f.write(final_report)
