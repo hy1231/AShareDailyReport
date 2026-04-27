@@ -6,7 +6,7 @@ from datetime import datetime
 class DataCollector:
     def __init__(self):
         self.today = datetime.now().strftime("%Y-%m-%d")
-        self.cache_dir = "cache"
+        self.cache_dir = "data/cache"
         if not os.path.exists(self.cache_dir):
             os.makedirs(self.cache_dir)
 
