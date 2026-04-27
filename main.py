@@ -55,10 +55,10 @@ def main():
     # 这里我们假设你已经按建议修改了 Visualizer，或者直接在这里处理
     
     # 获取 plotly 的 fig 对象
-    fig = Visualizer.create_figure(full_industries) # 建议新增这个方法返回 fig
+    fig = Visualizer.generate_industry_treemap(full_industries) # 建议新增这个方法返回 fig
     
     # 保存为 HTML (留着本地看)
-    treemap_html = fig.to_html(full_html=False, include_plotlyjs='cdn')
+    #treemap_html = fig.to_html(full_html=False, include_plotlyjs='cdn')
     
     # 保存为静态图片 (给公众号用)
     # 我们把图片存放在 output/images/ 目录下
@@ -100,9 +100,7 @@ def main():
         volume=market_data['volume'],
         ai_review=review_markdown,
         # 传递图片路径，对应模板里的 ![今日 A 股热力图]({{ chart_image_path }})
-        chart_image_path=rel_image_path,
-        # 如果你模板里还留着 {{ chart_html }}，也可以传，但建议公众号版去掉
-        chart_html=treemap_html 
+        chart_image_path=rel_image_path
     )
 
     # 5. 保存最终报告
