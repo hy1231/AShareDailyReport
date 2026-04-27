@@ -28,12 +28,12 @@ env/
 
 # --- 敏感信息 (绝对不能上传) ---
 .env
-configs/settings.py  # 如果你把 Key 写在了这里
+configs/settings.py 
 
 # --- 项目特有文件夹 ---
-data/cache/          # 本地缓存的数据
-output/              # 生成的日报结果
-.ipynb_checkpoints/  # 如果你用了 Jupyter Notebook
+data/cache/  
+output/
+.ipynb_checkpoints/
 
 # --- 编辑器/系统配置文件 ---
 .vscode/

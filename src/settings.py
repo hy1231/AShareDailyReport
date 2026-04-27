@@ -32,12 +32,16 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
 
 # 调用清理方法（确保全局环境默认是干净的）
-clear_system_proxies()
+#clear_system_proxies()
 
 # AI相关配置
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 MODEL_ID = os.getenv("GOOGLE_MODEL_ID")
 GEMINI_PROXY = os.getenv("GEMINI_PROXY")
+
+## 全局代理
+os.environ["HTTP_PROXY"] = GEMINI_PROXY
+os.environ["HTTPS_PROXY"] = GEMINI_PROXY
 
 # 业务逻辑常量
 # 绘图颜色方案 (统一在这里修改 UI 风格)

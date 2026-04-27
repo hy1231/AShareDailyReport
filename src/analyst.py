@@ -5,25 +5,8 @@ from src import settings
 import textwrap
 class AIAnalyst:
     def __init__(self):
-        import os
-        # 备份原有的环境变量（防止影响其他库）
-        old_http = os.environ.get('HTTP_PROXY')
-        old_https = os.environ.get('HTTPS_PROXY')
-
-        # 临时注入代理
-        os.environ['HTTP_PROXY'] = settings.GEMINI_PROXY
-        os.environ['HTTPS_PROXY'] = settings.GEMINI_PROXY
-
-        # 初始化 Client（它在这一瞬间抓取了环境变量）
+        # 初始化 Client
         self.client = genai.Client(api_key=settings.GOOGLE_API_KEY)
-
-        # 立即还原（或者清除），确保后续的接口请求不再受影响
-        if old_http: os.environ['HTTP_PROXY'] = old_http
-        else: del os.environ['HTTP_PROXY']
-        
-        if old_https: os.environ['HTTPS_PROXY'] = old_https
-        else: del os.environ['HTTPS_PROXY']
-
         self.model_id = settings.MODEL_ID
 
     def get_market_review(self, market_data, industry_data):
@@ -75,7 +58,6 @@ class AIAnalyst:
         print("-" * 50)
         print(prompt)
         print("-" * 50)
-
 
         try:
             response = self.client.models.generate_content(

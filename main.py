@@ -1,14 +1,14 @@
-import os
+from src import settings ## 放到最前面，里面设置代理
 from dotenv import load_dotenv
 from jinja2 import Template
 from src.collector import DataCollector
 from src.visualizer import Visualizer
 from src.analyst import AIAnalyst
-from src import settings
 
 import urllib.request
 urllib.request.getproxies = lambda: {}
 
+from google import genai
 
 load_dotenv()
 
@@ -104,7 +104,7 @@ def main():
     )
 
     # 保存最终报告
-    output_filename = f"reports/A股深度复盘_{market_data['date']}.md"
+    output_filename = f"output/A股深度复盘_{market_data['date']}.md"
     with open(output_filename, 'w', encoding='utf-8') as f:
         f.write(final_report)
 
