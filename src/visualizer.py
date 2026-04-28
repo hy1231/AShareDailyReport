@@ -1,13 +1,13 @@
 import pandas as pd
 import plotly.express as px
+import numpy as np
 
 class Visualizer:
     @staticmethod
     def generate_industry_treemap(industry_data):
         """
-        生成行业板块涨跌热力图
-        :param industry_data: List[dict]，由 DataCollector.get_top_industries() 返回
-        :return: plotly.graph_objects.Figure 对象，失败则返回 None
+        生成针对公众号优化的高清行业热力图
+        修复内容：NaN% 显示 bug、文字模糊、配色对比度
         """
         if not industry_data:
             print("⚠️ [Visualizer] 收到空数据，跳过热力图生成。")
@@ -16,12 +16,10 @@ class Visualizer:
         # 1. 转换为 DataFrame
         df = pd.DataFrame(industry_data)
 
-        # 2. 核心字段校验与清洗
-        required_cols = ['行业名称', '涨跌幅', '成交额']
-        for col in required_cols:
-            if col not in df.columns:
-                print(f"❌ [Visualizer] 缺少必要列: {col}")
-                return None
+        # 2. 【核心修复】数据清洗：强制转为数字并填充空值
+        # 即使 dtype 是 float64，fillna(0) 也能解决根节点或异常行导致的 NaN 问题
+        df['涨跌幅'] = pd.to_numeric(df['涨跌幅'], errors='coerce').fillna(0.0)
+        df['成交额'] = pd.to_numeric(df['成交额'], errors='coerce').fillna(0.0)
 
         # 3. 绘图参数设置
         fig = px.treemap(
@@ -29,25 +27,38 @@ class Visualizer:
             path=[px.Constant("A股行业分布"), '行业名称'],
             values='成交额',
             color='涨跌幅',
-            # 经典的绿-白-红配色
-            color_continuous_scale=['#52c41a', '#f5f5f5', '#ff4d4f'],
+            # 强化配色：深绿 - 纯白 - 深红
+            color_continuous_scale=['#237804', '#ffffff', '#cf1322'], 
             color_continuous_midpoint=0,
-            range_color=[-5, 5],
-            hover_data={
-                '行业名称': True,
-                '涨跌幅': ':.2f%',
-                '成交额': ':.2f亿',
-                '领涨股票': True 
-            }
+            range_color=[-4, 4],
+            # 将涨跌幅放入 custom_data，这是解决 NaN% 显示的关键保险
+            custom_data=['涨跌幅'] 
         )
 
-        # 4. 样式美化
+        # 4. 公众号视觉优化（高清布局）
         fig.update_layout(
-            margin=dict(t=30, l=10, r=10, b=10),
-            height=600,
-            title_text="今日行业板块资金流向与涨幅分布 (49个一级分类)"
+            width=1000,    # 固定宽度，确保文字比例一致
+            height=800,
+            margin=dict(t=80, l=20, r=20, b=20),
+            title_text="今日行业板块资金流向与涨幅分布",
+            title_font=dict(size=28, family="SimHei", color="black"),
+            # 设置全局字体为黑体，加粗感更强
+            font=dict(size=20, family="SimHei", color="black"),
+            # 优化右侧色标条
+            coloraxis_colorbar=dict(
+                title="涨跌幅 (%)",
+                thicknessmode="pixels", thickness=20,
+                lenmode="pixels", len=400
+            )
+        )
+
+        # 5. 【核心修复】强制显示加粗文字，并从 custom_data 取值避开 NaN
+        fig.update_traces(
+            # 使用 <b> 标签加粗，使用 customdata[0] 确保百分比显示正常
+            texttemplate="<b>%{label}</b><br>%{customdata[0]:.2f}%", 
+            textfont=dict(size=22),
+            marker_line_width=2,  # 增加方块边框线，提高辨识度
+            selector=dict(type='treemap')
         )
         
-        # 5. 直接返回 fig 对象
-        # 调用方可以根据需要执行 fig.to_html() 或 fig.write_image()
         return fig

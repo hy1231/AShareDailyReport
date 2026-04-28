@@ -54,14 +54,13 @@ def main():
 
     # 2. 生成图表并存入缓存 (data/cache)
     fig = Visualizer.generate_industry_treemap(full_industries) 
-    
     cache_dir = "data/cache"
     os.makedirs(cache_dir, exist_ok=True)
     image_filename = f"hotmap_{date_str}.png"
     image_cache_path = f"{cache_dir}/{image_filename}"
     
     # 保存图片到缓存（如果追求极致，这里可以加个 os.path.exists 判断，存在就不重写）
-    fig.write_image(image_cache_path, scale=2) 
+    fig.write_image(image_cache_path, scale=3) 
     print(f"📸 静态图片已缓存至: {image_cache_path}")
 
     # 3. 构造 AI 输入并获取分析
