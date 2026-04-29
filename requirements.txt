@@ -4,3 +4,4 @@ pandas
 plotly
 jinja2
 python-dotenv
+yfinance

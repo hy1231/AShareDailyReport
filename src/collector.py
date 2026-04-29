@@ -2,6 +2,7 @@ import os
 import pandas as pd
 import akshare as ak
 from datetime import datetime
+import yfinance as yf
 
 class DataCollector:
     def __init__(self):
@@ -112,3 +113,26 @@ class DataCollector:
         except Exception as e:
             print(f"❌ 行业清洗异常: {e}")
             return []
+
+    def get_oil_data(self):
+        """
+        获取布伦特原油最近30天数据
+        """
+        oil_cache_path = os.path.join(self.cache_dir, f"oil_data_{self.today}.csv")
+
+        if os.path.exists(oil_cache_path):
+            print(f"📦 [Cache] 命中原油数据缓存...")
+            df = pd.read_csv(oil_cache_path, index_col=0, parse_dates=True)
+        else:
+            print("🛢️ [YFinance] 正在抓取布伦特原油行情...")
+            try:
+                oil = yf.Ticker("BZ=F")
+                hist = oil.history(period="30d")
+                hist.to_csv(oil_cache_path)
+                print(f"💾 [Storage] 原油数据已备份: {oil_cache_path}")
+                return hist
+            except Exception as e:
+                print(f"❌ 原油数据采集失败: {e}")
+                return None
+
+        return df

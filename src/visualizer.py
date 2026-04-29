@@ -1,5 +1,6 @@
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
 import numpy as np
 
 class Visualizer:
@@ -54,11 +55,29 @@ class Visualizer:
 
         # 5. 【核心修复】强制显示加粗文字，并从 custom_data 取值避开 NaN
         fig.update_traces(
-            # 使用 <b> 标签加粗，使用 customdata[0] 确保百分比显示正常
-            texttemplate="<b>%{label}</b><br>%{customdata[0]:.2f}%", 
+            texttemplate="<b>%{label}</b><br>%{customdata[0]:.2f}%",
             textfont=dict(size=22),
-            marker_line_width=2,  # 增加方块边框线，提高辨识度
+            marker_line_width=2,
             selector=dict(type='treemap')
         )
-        
+
+        return fig
+
+    @staticmethod
+    def generate_line_chart(data, title="布伦特原油近期走势"):
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(
+            x=data.index,
+            y=data['Close'],
+            mode='lines+markers',
+            line=dict(color='#cf1322', width=3),
+            name='Price'
+        ))
+
+        fig.update_layout(
+            title=title,
+            width=1000, height=500,
+            template="plotly_white",
+            font=dict(family="SimHei", size=18)
+        )
         return fig
