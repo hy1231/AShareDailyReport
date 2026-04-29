@@ -114,25 +114,38 @@ class DataCollector:
             print(f"❌ 行业清洗异常: {e}")
             return []
 
-    def get_oil_data(self):
+    def get_macro_data(self):
         """
-        获取布伦特原油最近30天数据
+        获取宏观经济指标：原油与汇率
         """
         oil_cache_path = os.path.join(self.cache_dir, f"oil_data_{self.today}.csv")
+        fx_cache_path = os.path.join(self.cache_dir, f"fx_data_{self.today}.csv")
 
-        if os.path.exists(oil_cache_path):
-            print(f"📦 [Cache] 命中原油数据缓存...")
-            df = pd.read_csv(oil_cache_path, index_col=0, parse_dates=True)
-        else:
-            print("🛢️ [YFinance] 正在抓取布伦特原油行情...")
-            try:
-                oil = yf.Ticker("BZ=F")
-                hist = oil.history(period="30d")
-                hist.to_csv(oil_cache_path)
+        try:
+            if os.path.exists(oil_cache_path):
+                oil = pd.read_csv(oil_cache_path, index_col=0, parse_dates=True)
+                print(f"📦 [Cache] 命中原油数据缓存...")
+            else:
+                print("🛢️ [YFinance] 正在抓取布伦特原油行情...")
+                oil = yf.Ticker("BZ=F").history(period="30d")
+                oil.to_csv(oil_cache_path)
                 print(f"💾 [Storage] 原油数据已备份: {oil_cache_path}")
-                return hist
-            except Exception as e:
-                print(f"❌ 原油数据采集失败: {e}")
-                return None
 
-        return df
+            if os.path.exists(fx_cache_path):
+                fx = pd.read_csv(fx_cache_path, index_col=0, parse_dates=True)
+                print(f"📦 [Cache] 命中汇率数据缓存...")
+            else:
+                print("💱 [YFinance] 正在抓取离岸人民币行情...")
+                fx = yf.Ticker("USDCNH=X").history(period="30d")
+                fx.to_csv(fx_cache_path)
+                print(f"💾 [Storage] 汇率数据已备份: {fx_cache_path}")
+
+            return {
+                "oil": oil,
+                "fx": fx,
+                "current_fx": round(fx['Close'].iloc[-1], 4),
+                "fx_change": round(fx['Close'].iloc[-1] - fx['Close'].iloc[-2], 4)
+            }
+        except Exception as e:
+            print(f"❌ 获取宏观数据失败: {e}")
+            return None

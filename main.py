@@ -62,17 +62,25 @@ def main():
     fig.write_image(image_cache_path, scale=3) 
     print(f"📸 行业热力图已缓存至: {image_cache_path}")
 
-    # 3. 获取原油数据并生成走势图
-    oil_data = collector.get_oil_data()
-    oil_chart_path = ""
-    if oil_data is not None and not oil_data.empty:
-        oil_fig = Visualizer.generate_line_chart(oil_data)
-        oil_filename = f"oil_{date_str}.png"
-        oil_chart_path = f"{cache_dir}/{oil_filename}"
-        oil_fig.write_image(oil_chart_path, scale=3)
-        print(f"📈 原油走势图已缓存至: {oil_chart_path}")
+    # 3. 获取宏观数据并生成走势图
+    macro_data = collector.get_macro_data()
+    rel_oil_path = ""
+    rel_fx_path = ""
+    current_fx = ""
+    if macro_data:
+        oil_fig = Visualizer.generate_line_chart(macro_data['oil'], "布伦特原油近期走势 (USD/桶)", "#cf1322")
+        rel_oil_path = f"../data/cache/oil_{date_str}.png"
+        oil_fig.write_image(f"data/cache/oil_{date_str}.png", scale=3)
+        print(f"📈 原油走势图已缓存")
+
+        fx_fig = Visualizer.generate_line_chart(macro_data['fx'], "美元兑离岸人民币 (USD/CNH)", "#1890ff")
+        rel_fx_path = f"../data/cache/fx_{date_str}.png"
+        fx_fig.write_image(f"data/cache/fx_{date_str}.png", scale=3)
+        print(f"📈 汇率走势图已缓存")
+
+        current_fx = macro_data['current_fx']
     else:
-        print("⚠️ 原油数据获取失败，跳过图表生成")
+        print("⚠️ 宏观数据获取失败，跳过图表生成")
 
     # 3. 构造 AI 输入并获取分析
     stock_insights = prepare_stock_insights(market_data['raw_df'])
@@ -92,7 +100,6 @@ def main():
     with open('templates/report_template.md', 'r', encoding='utf-8') as f:
         tmpl = Template(f.read())
     rel_image_path = f"../data/cache/{image_filename}"
-    rel_oil_path = f"../data/cache/oil_{date_str}.png" if oil_chart_path else ""
 
     final_report = tmpl.render(
         date=date_str, 
@@ -101,7 +108,9 @@ def main():
         volume=market_data['volume'],
         ai_review=review_markdown,
         chart_image_path=rel_image_path,
-        oil_chart_path=rel_oil_path
+        oil_chart_path=rel_oil_path,
+        fx_chart_path=rel_fx_path,
+        current_fx=current_fx
     )
 
     # 5. 保存最终报告到 output

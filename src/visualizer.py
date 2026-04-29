@@ -64,20 +64,28 @@ class Visualizer:
         return fig
 
     @staticmethod
-    def generate_line_chart(data, title="布伦特原油近期走势"):
+    def generate_line_chart(data, title, color="#cf1322"):
+        rgb = tuple(int(color.lstrip('#')[i:i+2], 16) for i in (0, 2, 4))
+        fill_color = f"rgba{rgb + (0.1,)}"
+
         fig = go.Figure()
         fig.add_trace(go.Scatter(
             x=data.index,
             y=data['Close'],
-            mode='lines+markers',
-            line=dict(color='#cf1322', width=3),
-            name='Price'
+            mode='lines',
+            line=dict(color=color, width=4),
+            fill='tozeroy',
+            fillcolor=fill_color
         ))
 
         fig.update_layout(
             title=title,
-            width=1000, height=500,
+            width=1000,
+            height=400,
             template="plotly_white",
-            font=dict(family="SimHei", size=18)
+            margin=dict(t=60, l=50, r=20, b=40),
+            font=dict(family="SimHei", size=18),
+            xaxis=dict(showgrid=False),
+            yaxis=dict(showgrid=True, gridcolor="#f0f0f0")
         )
         return fig
