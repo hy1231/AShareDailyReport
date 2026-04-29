@@ -52,16 +52,27 @@ def main():
         return
     date_str = market_data['date']
 
-    # 2. 生成图表并存入缓存 (data/cache)
+    # 2. 生成行业热力图并存入缓存 (data/cache)
     fig = Visualizer.generate_industry_treemap(full_industries) 
     cache_dir = "data/cache"
     os.makedirs(cache_dir, exist_ok=True)
     image_filename = f"hotmap_{date_str}.png"
     image_cache_path = f"{cache_dir}/{image_filename}"
     
-    # 保存图片到缓存（如果追求极致，这里可以加个 os.path.exists 判断，存在就不重写）
     fig.write_image(image_cache_path, scale=3) 
-    print(f"📸 静态图片已缓存至: {image_cache_path}")
+    print(f"📸 行业热力图已缓存至: {image_cache_path}")
+
+    # 3. 获取原油数据并生成走势图
+    oil_data = collector.get_oil_data()
+    oil_chart_path = ""
+    if oil_data is not None and not oil_data.empty:
+        oil_fig = Visualizer.generate_line_chart(oil_data)
+        oil_filename = f"oil_{date_str}.png"
+        oil_chart_path = f"{cache_dir}/{oil_filename}"
+        oil_fig.write_image(oil_chart_path, scale=3)
+        print(f"📈 原油走势图已缓存至: {oil_chart_path}")
+    else:
+        print("⚠️ 原油数据获取失败，跳过图表生成")
 
     # 3. 构造 AI 输入并获取分析
     stock_insights = prepare_stock_insights(market_data['raw_df'])
@@ -81,6 +92,7 @@ def main():
     with open('templates/report_template.md', 'r', encoding='utf-8') as f:
         tmpl = Template(f.read())
     rel_image_path = f"../data/cache/{image_filename}"
+    rel_oil_path = f"../data/cache/oil_{date_str}.png" if oil_chart_path else ""
 
     final_report = tmpl.render(
         date=date_str, 
@@ -88,7 +100,8 @@ def main():
         down=market_data['down'],
         volume=market_data['volume'],
         ai_review=review_markdown,
-        chart_image_path=rel_image_path
+        chart_image_path=rel_image_path,
+        oil_chart_path=rel_oil_path
     )
 
     # 5. 保存最终报告到 output
