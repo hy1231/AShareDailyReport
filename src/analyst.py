@@ -54,7 +54,7 @@ class AIAnalyst:
 ### 🎯 个股异动 (蒸馏情报)
 - **领涨先锋**：{self._format_stocks(insights.get('gainers', []))}
 - **跌幅重灾**：{self._format_stocks(insights.get('losers', []))}
-- **资金焦点**：{self._format_stocks(insights.get('active', []))}
+- **成交额榜**：{self._format_stocks(insights.get('active', []))}
 
 ---
 ### ✍️ 写作要求：
