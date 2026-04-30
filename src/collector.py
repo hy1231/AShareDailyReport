@@ -1,7 +1,7 @@
 import os
 import pandas as pd
 import akshare as ak
-from datetime import datetime
+from datetime import datetime, timedelta
 import yfinance as yf
 
 class DataCollector:
@@ -116,36 +116,71 @@ class DataCollector:
 
     def get_macro_data(self):
         """
-        获取宏观经济指标：原油与汇率
+        使用最稳定的数据源组合。
+        汇率使用 AkShare 东财(EM)接口，原油使用 yfinance（更稳定）。
+        支持缓存机制，避免重复调用接口。
         """
-        oil_cache_path = os.path.join(self.cache_dir, f"oil_data_{self.today}.csv")
-        fx_cache_path = os.path.join(self.cache_dir, f"fx_data_{self.today}.csv")
-
         try:
-            if os.path.exists(oil_cache_path):
-                oil = pd.read_csv(oil_cache_path, index_col=0, parse_dates=True)
-                print(f"📦 [Cache] 命中原油数据缓存...")
+            # 检查缓存文件是否存在
+            fx_cache_path = os.path.join(self.cache_dir, "fx_data.csv")
+            oil_cache_path = os.path.join(self.cache_dir, "oil_data.csv")
+            
+            if os.path.exists(fx_cache_path) and os.path.exists(oil_cache_path):
+                print(f"📋 使用缓存数据: {fx_cache_path}")
+                fx_df = pd.read_csv(fx_cache_path, index_col=0, parse_dates=True)
+                oil_df = pd.read_csv(oil_cache_path, index_col=0, parse_dates=True)
+                
+                return {
+                    "oil": oil_df.tail(30),
+                    "fx": fx_df.tail(30),
+                    "current_fx": round(fx_df['Close'].iloc[-1], 4),
+                    "current_oil": round(oil_df['Close'].iloc[-1], 2)
+                }
+            
+            # 1. 抓取离岸人民币 - 只传 symbol
+            print("🔍 [AkShare] 正在拉取汇率全量数据...")
+            fx_df = ak.forex_hist_em(symbol="USDCNH")
+            
+            # 根据实际返回的列名进行映射
+            # 实际列名: ['代码', '名称', '今开', '最新价', '最高', '最低', '振幅']
+            if '最新价' in fx_df.columns:
+                fx_df = fx_df.rename(columns={'最新价': 'Close'})
             else:
-                print("🛢️ [YFinance] 正在抓取布伦特原油行情...")
-                oil = yf.Ticker("BZ=F").history(period="30d")
-                oil.to_csv(oil_cache_path)
-                print(f"💾 [Storage] 原油数据已备份: {oil_cache_path}")
+                print(f"⚠️ 无法识别列名，当前列名: {fx_df.columns.tolist()}")
+                return None
+            
+            # 修复日期索引：处理 Excel 日期序列号问题
+            if not isinstance(fx_df.index, pd.DatetimeIndex):
+                # 如果索引是数字，按 Excel 日期处理（1900-01-01 为基准）
+                if pd.api.types.is_numeric_dtype(fx_df.index):
+                    fx_df.index = pd.to_datetime(fx_df.index, unit='D', origin='1899-12-30')
+                else:
+                    fx_df.index = pd.to_datetime(fx_df.index)
+            
+            # 确保排序正确
+            fx_df = fx_df.sort_index()
 
-            if os.path.exists(fx_cache_path):
-                fx = pd.read_csv(fx_cache_path, index_col=0, parse_dates=True)
-                print(f"📦 [Cache] 命中汇率数据缓存...")
-            else:
-                print("💱 [YFinance] 正在抓取离岸人民币行情...")
-                fx = yf.Ticker("USDCNH=X").history(period="30d")
-                fx.to_csv(fx_cache_path)
-                print(f"💾 [Storage] 汇率数据已备份: {fx_cache_path}")
+            # 2. 抓取布伦特原油 - 使用 yfinance（更稳定）
+            print("🔍 [YFinance] 正在拉取布伦特原油数据...")
+            oil_df = yf.Ticker("BZ=F").history(period="30d")
+            
+            # 确保日期索引是 datetime 类型
+            if not isinstance(oil_df.index, pd.DatetimeIndex):
+                oil_df.index = pd.to_datetime(oil_df.index)
+
+            # 3. 缓存到本地文件
+            fx_cache_path = os.path.join(self.cache_dir, "fx_data.csv")
+            oil_cache_path = os.path.join(self.cache_dir, "oil_data.csv")
+            fx_df.to_csv(fx_cache_path, encoding="utf-8-sig")
+            oil_df.to_csv(oil_cache_path, encoding="utf-8-sig")
+            print(f"💾 宏观数据已缓存: {fx_cache_path}, {oil_cache_path}")
 
             return {
-                "oil": oil,
-                "fx": fx,
-                "current_fx": round(fx['Close'].iloc[-1], 4),
-                "fx_change": round(fx['Close'].iloc[-1] - fx['Close'].iloc[-2], 4)
+                "oil": oil_df.tail(30),
+                "fx": fx_df.tail(30),
+                "current_fx": round(fx_df['Close'].iloc[-1], 4),
+                "current_oil": round(oil_df['Close'].iloc[-1], 2)
             }
         except Exception as e:
-            print(f"❌ 获取宏观数据失败: {e}")
+            print(f"❌ 宏观数据采集报错: {e}")
             return None
