@@ -7,7 +7,7 @@ import yfinance as yf
 class DataCollector:
     def __init__(self):
         self.today = datetime.now().strftime("%Y-%m-%d")
-        self.cache_dir = "data/cache"
+        self.cache_dir = os.path.join("data/cache", self.today)
         if not os.path.exists(self.cache_dir):
             os.makedirs(self.cache_dir)
 

@@ -52,12 +52,12 @@ def main():
         return
     date_str = market_data['date']
 
-    # 2. 生成行业热力图并存入缓存 (data/cache)
+    # 2. 生成行业热力图并存入缓存 (data/cache/{date})
     fig = Visualizer.generate_industry_treemap(full_industries) 
-    cache_dir = "data/cache"
+    cache_dir = os.path.join("data/cache", date_str)
     os.makedirs(cache_dir, exist_ok=True)
-    image_filename = f"hotmap_{date_str}.png"
-    image_cache_path = f"{cache_dir}/{image_filename}"
+    image_filename = "hotmap.png"
+    image_cache_path = os.path.join(cache_dir, image_filename)
     
     fig.write_image(image_cache_path, scale=3) 
     print(f"📸 行业热力图已缓存至: {image_cache_path}")
@@ -69,13 +69,13 @@ def main():
     current_fx = ""
     if macro_data:
         oil_fig = Visualizer.generate_line_chart(macro_data['oil'], "布伦特原油近期走势 (USD/桶)", "#cf1322")
-        rel_oil_path = f"../data/cache/oil_{date_str}.png"
-        oil_fig.write_image(f"data/cache/oil_{date_str}.png", scale=3)
+        rel_oil_path = f"../data/cache/{date_str}/oil.png"
+        oil_fig.write_image(os.path.join(cache_dir, "oil.png"), scale=3)
         print(f"📈 原油走势图已缓存")
 
         fx_fig = Visualizer.generate_line_chart(macro_data['fx'], "美元兑离岸人民币 (USD/CNH)", "#1890ff")
-        rel_fx_path = f"../data/cache/fx_{date_str}.png"
-        fx_fig.write_image(f"data/cache/fx_{date_str}.png", scale=3)
+        rel_fx_path = f"../data/cache/{date_str}/fx.png"
+        fx_fig.write_image(os.path.join(cache_dir, "fx.png"), scale=3)
         print(f"📈 汇率走势图已缓存")
 
         current_fx = macro_data['current_fx']
@@ -99,7 +99,7 @@ def main():
     # 4. 渲染 Markdown
     with open('templates/report_template.md', 'r', encoding='utf-8') as f:
         tmpl = Template(f.read())
-    rel_image_path = f"../data/cache/{image_filename}"
+    rel_image_path = f"../data/cache/{date_str}/{image_filename}"
 
     final_report = tmpl.render(
         date=date_str, 

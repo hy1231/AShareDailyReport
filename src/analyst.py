@@ -24,7 +24,9 @@ class AIAnalyst:
 
         # 1. 检查缓存：根据日期生成缓存文件名
         date_str = market_data.get('date', 'unknown')
-        cache_path = f"{self.cache_dir}/ai_review_{date_str}.txt"
+        daily_cache_dir = os.path.join(self.cache_dir, date_str)
+        os.makedirs(daily_cache_dir, exist_ok=True)
+        cache_path = os.path.join(daily_cache_dir, "ai_review.txt")
 
         if os.path.exists(cache_path):
             print(f"📦 [Cache Hit] 发现 {date_str} 的本地复盘缓存，直接读取。")
