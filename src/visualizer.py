@@ -69,6 +69,7 @@ class Visualizer:
         fill_color = f"rgba{rgb + (0.1,)}"
 
         fig = go.Figure()
+        print(f"[DEBUG] data.index type: {type(data.index)}, values: {data.index.tolist()[:5]}")
         fig.add_trace(go.Scatter(
             x=data.index,
             y=data['Close'],

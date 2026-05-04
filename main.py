@@ -96,6 +96,11 @@ def main():
     print("🧠 正在请求 Gemini 进行专业复盘...")
     review_markdown = analyst.get_market_review(ai_input_data, full_industries)
 
+    # 检测 AI 复盘是否失败
+    if review_markdown == "AI_REVIEW_FAILED":
+        print("❌ AI 复盘生成失败，终止报告生成")
+        return
+
     # 4. 渲染 Markdown
     with open('templates/report_template.md', 'r', encoding='utf-8') as f:
         tmpl = Template(f.read())

@@ -15,7 +15,7 @@ class DataCollector:
         """
         获取全市场 A 股快照：改用通用接口，避开东财 IP 封锁
         """
-        raw_cache_path = os.path.join(self.cache_dir, f"raw_market_{self.today}.csv")
+        raw_cache_path = os.path.join(self.cache_dir, "raw_market.csv")
 
         if os.path.exists(raw_cache_path):
             print(f"📦 [Cache] 命中个股快照缓存，正在加载...")
@@ -68,7 +68,7 @@ class DataCollector:
         """
         获取行业板块行情：改用新浪源，对齐“板块”和“总成交额”字段
         """
-        raw_ind_cache = os.path.join(self.cache_dir, f"raw_industries_{self.today}.csv")
+        raw_ind_cache = os.path.join(self.cache_dir, "raw_industries.csv")
 
         if os.path.exists(raw_ind_cache):
             print(f"📦 [Cache] 命中行业快照缓存...")
@@ -137,32 +137,20 @@ class DataCollector:
                     "current_oil": round(oil_df['Close'].iloc[-1], 2)
                 }
             
-            # 1. 抓取离岸人民币 - 只传 symbol
-            print("🔍 [AkShare] 正在拉取汇率全量数据...")
-            fx_df = ak.forex_hist_em(symbol="USDCNH")
+            # 1. 抓取离岸人民币 - 使用 yfinance（更稳定）
+            print("🔍 [YFinance] 正在拉取汇率数据...")
+            fx_df = yf.Ticker("CNH=X").history(period="30d")
             
-            # 根据实际返回的列名进行映射
-            # 实际列名: ['代码', '名称', '今开', '最新价', '最高', '最低', '振幅']
-            if '最新价' in fx_df.columns:
-                fx_df = fx_df.rename(columns={'最新价': 'Close'})
-            else:
-                print(f"⚠️ 无法识别列名，当前列名: {fx_df.columns.tolist()}")
-                return None
-            
-            # 修复日期索引：处理 Excel 日期序列号问题
+            # 确保日期索引是 datetime 类型
             if not isinstance(fx_df.index, pd.DatetimeIndex):
-                # 如果索引是数字，按 Excel 日期处理（1900-01-01 为基准）
-                if pd.api.types.is_numeric_dtype(fx_df.index):
-                    fx_df.index = pd.to_datetime(fx_df.index, unit='D', origin='1899-12-30')
-                else:
-                    fx_df.index = pd.to_datetime(fx_df.index)
+                fx_df.index = pd.to_datetime(fx_df.index)
             
             # 确保排序正确
             fx_df = fx_df.sort_index()
 
             # 2. 抓取布伦特原油 - 使用 yfinance（更稳定）
             print("🔍 [YFinance] 正在拉取布伦特原油数据...")
-            oil_df = yf.Ticker("BZ=F").history(period="30d")
+            oil_df = yf.Ticker("BZ=F").history(period="max")
             
             # 确保日期索引是 datetime 类型
             if not isinstance(oil_df.index, pd.DatetimeIndex):

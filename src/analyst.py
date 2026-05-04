@@ -101,7 +101,7 @@ class AIAnalyst:
 
         except Exception as e:
             print(f"⚠️ AI 复盘生成失败: {str(e)}")
-            return f"> ⚠️ AI 复盘生成失败：{str(e)}"
+            return "AI_REVIEW_FAILED"
 
     def _format_industry_for_ai(self, data):
         """格式化全量 49 个行业数据，保持精简"""
