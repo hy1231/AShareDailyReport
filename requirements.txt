@@ -1,5 +1,7 @@
 google-genai
 efinance
+akshare
+requests
 pandas
 plotly
 jinja2
