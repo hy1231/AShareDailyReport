@@ -84,12 +84,24 @@ def main():
 
     # 3. 构造 AI 输入并获取分析
     stock_insights = prepare_stock_insights(market_data['raw_df'])
+    
+    # 计算宏观统计数据
+    fx_stats = None
+    oil_stats = None
+    if macro_data:
+        fx_stats = DataCollector.calc_fx_stats(macro_data['fx'])
+        oil_stats = DataCollector.calc_oil_stats(macro_data['oil'])
+    
     ai_input_data = {
         "date": date_str,
         "up": market_data['up'],
         "down": market_data['down'],
         "volume": market_data['volume'],
-        "stock_insights": stock_insights
+        "stock_insights": stock_insights,
+        "macro": {
+            "fx": fx_stats,
+            "oil": oil_stats
+        }
     }
 
     analyst = AIAnalyst()

@@ -41,15 +41,30 @@ class AIAnalyst:
         formatted_industries = self._format_industry_for_ai(industry_data)
 
         # 构建增强版 Prompt
+        # 构建宏观数据描述
+        macro_section = ""
+        if market_data.get('macro'):
+            fx = market_data['macro'].get('fx')
+            oil = market_data['macro'].get('oil')
+            if fx:
+                macro_section += f"""### 🌍 宏观环境观察
+- **美元兑离岸人民币 (USD/CNH)**：{fx['当前汇率']}，日变化 {fx['日变化']:+.4f}，近30日均值 {fx['近30日均值']}，趋势 {fx['趋势']}
+"""
+            if oil:
+                macro_section += f"""- **布伦特原油**：${oil['当前油价']}/桶，日变化 ${oil['日变化']:+.2f}，近30日均值 ${oil['近30日均值']}，趋势 {oil['趋势']}
+"""
+            if fx or oil:
+                macro_section += "\n> 请结合宏观环境，分析汇率和原油对市场情绪的影响。\n"
+
         prompt = f"""
 你是一位拥有 10 年经验的资深宏观策略分析师，风格冷静、客观，擅长透过数据表象看清资金本质。请结合以下【宏观、行业、个股】多维数据撰写 Markdown 复盘简报。
 
----
+----
 ### 📊 市场快照
 - **日期**：{market_data.get('date')}
 - **多空分布**：上涨 {market_data.get('up')} / 下跌 {market_data.get('down')}
 - **成交总量**：{market_data.get('volume')}
-
+{macro_section}
 ### 🔥 全市场行业纵览 (49个一级行业)
 {formatted_industries }
 
@@ -58,13 +73,14 @@ class AIAnalyst:
 - **跌幅重灾**：{self._format_stocks(insights.get('losers', []))}
 - **成交额榜**：{self._format_stocks(insights.get('active', []))}
 
----
+----
 ### ✍️ 写作要求：
 1. **标题**：总结今日市场的核心运行逻辑。要求专业、有深度、客观理性。
-2. **赚钱效应**：基于个股涨跌比和成交数据，评估今日市场的赚钱效应真实度。判断是“普涨修复”、“结构性分化”还是“缩量抵抗”。
+2. **赚钱效应**：基于个股涨跌比和成交数据，评估今日市场的赚钱效应真实度。判断是"普涨修复"、"结构性分化"还是"缩量抵抗"。
 3. **灵魂点评**：**必须引用数据中的具体行业和代表性个股**。重点分析【资金焦点】榜单里的权重股表现，判断大资金态度。
 4. **量价逻辑**：结合 {market_data.get('volume')} 成交量，评价市场的承接力。
-5. **策略参考**：给出一句基于风险收益比的理性操作建议。不追求预判涨跌，而追求应对逻辑。
+5. **宏观联动**：结合 USD/CNH 和原油趋势，分析宏观因素对市场的影响。
+6. **策略参考**：给出一句基于风险收益比的理性操作建议。不追求预判涨跌，而追求应对逻辑。
 """
         
 
@@ -74,10 +90,10 @@ class AIAnalyst:
         # print(f"📊 宏观数据日期: {market_data.get('date')}")
         # print(f"📈 传入行业数量: {len(industry_data)}")
         
-        # # 打印完整的 Prompt 方便检查格式
-        # print("-" * 50)
-        # print(prompt)
-        # print("-" * 50)
+        # 打印完整的 Prompt 方便检查格式
+        print("-" * 50)
+        print(prompt)
+        print("-" * 50)
 
         try:
             response = self.client.models.generate_content(

@@ -179,3 +179,33 @@ class DataCollector:
         except Exception as e:
             print(f"❌ 宏观数据采集报错: {e}")
             return None
+
+    @staticmethod
+    def calc_fx_stats(fx_df):
+        """计算汇率关键统计"""
+        close = fx_df['Close']
+        current = close.iloc[-1]
+        prev = close.iloc[-2] if len(close) > 1 else current
+        return {
+            "当前汇率": round(current, 4),
+            "日变化": round(current - prev, 4),
+            "近30日均值": round(close.mean(), 4),
+            "近30日最高": round(close.max(), 4),
+            "近30日最低": round(close.min(), 4),
+            "趋势": "升值" if current < close.iloc[-30] else "贬值"
+        }
+
+    @staticmethod
+    def calc_oil_stats(oil_df):
+        """计算原油关键统计"""
+        close = oil_df['Close']
+        current = close.iloc[-1]
+        prev = close.iloc[-2] if len(close) > 1 else current
+        return {
+            "当前油价": round(current, 2),
+            "日变化": round(current - prev, 2),
+            "近30日均值": round(close.mean(), 2),
+            "近30日最高": round(close.max(), 2),
+            "近30日最低": round(close.min(), 2),
+            "趋势": "上涨" if current > close.iloc[-30] else "下跌"
+        }
