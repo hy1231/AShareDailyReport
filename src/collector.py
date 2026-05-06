@@ -137,13 +137,20 @@ class DataCollector:
                     "current_oil": round(oil_df['Close'].iloc[-1], 2)
                 }
             
-            # 1. 抓取离岸人民币 - 使用 yfinance（更稳定）
-            print("🔍 [YFinance] 正在拉取汇率数据...")
-            fx_df = yf.Ticker("CNH=X").history(period="30d")
+            # 1. 抓取离岸人民币 - 使用 AkShare 东财接口
+            print("🔍 [AkShare] 正在拉取汇率数据...")
+            fx_df = ak.forex_hist_em(symbol="USDCNH")
             
-            # 确保日期索引是 datetime 类型
-            if not isinstance(fx_df.index, pd.DatetimeIndex):
-                fx_df.index = pd.to_datetime(fx_df.index)
+            # 处理返回的列名和数据格式
+            # AkShare 返回格式: ['日期', '代码', '名称', '今开', '最新价', '最高', '最低', '振幅']
+            if '最新价' in fx_df.columns:
+                fx_df = fx_df.rename(columns={'最新价': 'Close'})
+            
+            # 使用 '日期' 列作为索引
+            if '日期' in fx_df.columns:
+                fx_df['Date'] = pd.to_datetime(fx_df['日期'])
+                fx_df.set_index('Date', inplace=True)
+                fx_df = fx_df.drop(columns=['日期'], errors='ignore')
             
             # 确保排序正确
             fx_df = fx_df.sort_index()
