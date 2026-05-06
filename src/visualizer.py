@@ -68,15 +68,19 @@ class Visualizer:
         rgb = tuple(int(color.lstrip('#')[i:i+2], 16) for i in (0, 2, 4))
         fill_color = f"rgba{rgb + (0.1,)}"
 
+        # 计算 Y 轴范围，放大波动幅度（关键！）
+        close_min = data['Close'].min()
+        close_max = data['Close'].max()
+        # 添加 10% 的边距，确保趋势清晰可见
+        range_padding = (close_max - close_min) * 0.1 if close_max > close_min else 0.01
+        
         fig = go.Figure()
-        print(f"[DEBUG] data.index type: {type(data.index)}, values: {data.index.tolist()[:5]}")
         fig.add_trace(go.Scatter(
             x=data.index,
             y=data['Close'],
             mode='lines',
             line=dict(color=color, width=4),
-            fill='tozeroy',
-            fillcolor=fill_color
+            fill='none'
         ))
 
         fig.update_layout(
@@ -87,6 +91,12 @@ class Visualizer:
             margin=dict(t=60, l=50, r=20, b=40),
             font=dict(family="SimHei", size=18),
             xaxis=dict(showgrid=False),
-            yaxis=dict(showgrid=True, gridcolor="#f0f0f0")
+            yaxis=dict(
+                showgrid=True,
+                gridcolor="#f0f0f0",
+                tickformat=".4f",
+                # 手动设置 Y 轴范围，只显示数据附近的区域
+                range=[close_min - range_padding, close_max + range_padding]
+            )
         )
         return fig
