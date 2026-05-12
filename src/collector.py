@@ -3,7 +3,7 @@ import pandas as pd
 import akshare as ak
 from datetime import datetime, timedelta
 import yfinance as yf
-
+import requests
 class DataCollector:
     def __init__(self):
         self.today = datetime.now().strftime("%Y-%m-%d")
@@ -137,23 +137,60 @@ class DataCollector:
                     "current_oil": round(oil_df['Close'].iloc[-1], 2)
                 }
             
-            # 1. 抓取离岸人民币 - 使用 AkShare 东财接口
-            print("🔍 [AkShare] 正在拉取汇率数据...")
-            fx_df = ak.forex_hist_em(symbol="USDCNH")
+            # 1. 抓取离岸人民币 - 使用新浪财经接口
+            print("🔍 [Sina] 正在拉取汇率数据 (USD/CNH)...")
             
-            # 处理返回的列名和数据格式
-            # AkShare 返回格式: ['日期', '代码', '名称', '今开', '最新价', '最高', '最低', '振幅']
-            if '最新价' in fx_df.columns:
-                fx_df = fx_df.rename(columns={'最新价': 'Close'})
+            import urllib3
+            urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
             
-            # 使用 '日期' 列作为索引
-            if '日期' in fx_df.columns:
-                fx_df['Date'] = pd.to_datetime(fx_df['日期'])
-                fx_df.set_index('Date', inplace=True)
-                fx_df = fx_df.drop(columns=['日期'], errors='ignore')
+            url = "https://vip.stock.finance.sina.com.cn/forex/api/jsonp.php/var_/NewForexService.getDayKLine?symbol=fx_susdcnh"
             
-            # 确保排序正确
-            fx_df = fx_df.sort_index()
+            headers = {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                "Referer": "https://finance.sina.com.cn/"
+            }
+            
+            try:
+                response = requests.get(url, headers=headers, timeout=10, verify=False)
+                response.raise_for_status()
+                
+                # 用正则提取 var_(" ... ") 括号里面的数据
+                import re
+                match = re.search(r'var_\("(.*?)"\)', response.text, re.DOTALL)
+                
+                if match:
+                    raw_string = match.group(1)
+                    # 先用竖线 "|" 切分每一天
+                    daily_records = [day for day in raw_string.split('|') if day]
+                    # 用逗号切分，只取前5个元素
+                    parsed_data = [record.split(',')[:5] for record in daily_records]
+                    
+                    # 塞入 DataFrame
+                    fx_df = pd.DataFrame(parsed_data, columns=['日期', '开盘', '最低', '最高', '收盘'])
+                    # 调整列顺序
+                    fx_df = fx_df[['日期', '开盘', '收盘', '最高', '最低']]
+                    
+                    # 转换为数字类型
+                    for col in ['开盘', '收盘', '最高', '最低']:
+                        fx_df[col] = pd.to_numeric(fx_df[col])
+                    
+                    # 转换日期并重命名列
+                    fx_df['Date'] = pd.to_datetime(fx_df['日期'])
+                    fx_df = fx_df.rename(columns={'收盘': 'Close'})
+                    fx_df.set_index('Date', inplace=True)
+                    fx_df = fx_df.drop(columns=['日期'], errors='ignore')
+                    
+                    # 确保排序正确
+                    fx_df = fx_df.sort_index()
+                    
+                    print(f"📊 获取到 {len(fx_df)} 条汇率数据")
+                else:
+                    print("❌ 新浪接口返回格式异常，未提取到有效数据")
+                    return None
+                    
+            except Exception as e:
+                print(f"❌ 新浪接口请求失败: {e}")
+                return None
 
             # 2. 抓取布伦特原油 - 使用 yfinance（更稳定）
             print("🔍 [YFinance] 正在拉取布伦特原油数据...")
