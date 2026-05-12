@@ -45,11 +45,8 @@ Thumbs.db
 
 # --- 绘图与日志 ---
 *.log
+*.png
 *.html
-
-# 忽略运行时生成的图片，但保留 assets/ 中的展示图片
-data/cache/**/*.png
-output/**/*.png
 
 ## 缓存文件
 cache
