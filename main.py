@@ -79,6 +79,7 @@ def main():
         print(f"📈 汇率走势图已缓存")
 
         current_fx = macro_data['current_fx']
+        current_oil = macro_data['current_oil']
     else:
         print("⚠️ 宏观数据获取失败，跳过图表生成")
 
@@ -124,10 +125,8 @@ def main():
         down=market_data['down'],
         volume=market_data['volume'],
         ai_review=review_markdown,
-        chart_image_path=rel_image_path,
-        oil_chart_path=rel_oil_path,
-        fx_chart_path=rel_fx_path,
-        current_fx=current_fx
+        current_fx=current_fx,
+        current_oil=current_oil
     )
 
     # 5. 保存最终报告到 output
