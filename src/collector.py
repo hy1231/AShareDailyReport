@@ -246,3 +246,46 @@ class DataCollector:
             "近30日最低": round(close.min(), 2),
             "趋势": "上涨" if current > close.iloc[-30] else "下跌"
         }
+    
+    @staticmethod
+    def calc_china_market_cap(raw_df):
+        """从已缓存的市场数据计算A股总市值（万亿元人民币）"""
+        try:
+            if raw_df is None or raw_df.empty:
+                print("⚠️ 市场数据为空，无法计算总市值")
+                return None
+            
+            # 查找"总市值"列（单位：元）
+            if '总市值' not in raw_df.columns:
+                print(f"⚠️ 未找到'总市值'列，可用列: {raw_df.columns.tolist()}")
+                return None
+            
+            # 转换为万亿元（总市值单位是元，除以 1e12 得到万亿元）
+            total_cap = raw_df['总市值'].sum() / 1e12
+            total_cap = round(total_cap, 2)
+            print(f"📊 A股总市值: {total_cap} 万亿元")
+            return total_cap
+        except Exception as e:
+            print(f"❌ 计算A股总市值失败: {e}")
+            return None
+    
+    @staticmethod
+    def get_us_market_cap():
+        """获取美股全市场总市值（万亿美元）- 使用威尔希尔5000指数"""
+        try:
+            print("🔍 [YFinance] 正在获取美股总市值 (Wilshire 5000)...")
+            ticker = yf.Ticker("^FTW5000")
+            hist = ticker.history(period="1d")
+            if hist is None or hist.empty:
+                print("⚠️ 美股指数数据为空")
+                return None
+            
+            close_price = hist['Close'].iloc[-1]
+            # 威尔希尔5000指数：1点 ≈ 10亿美元市值
+            # 所以指数点数 / 1000 = 万亿美元市值
+            total_cap = round(close_price / 1000.0, 2)
+            print(f"📊 美股总市值: {total_cap} 万亿美元")
+            return total_cap
+        except Exception as e:
+            print(f"❌ 获取美股总市值失败: {e}")
+            return None

@@ -83,6 +83,42 @@ def main():
     else:
         print("⚠️ 宏观数据获取失败，跳过图表生成")
 
+    # 4. 计算巴菲特指标（中美股市估值）
+    china_cap = DataCollector.calc_china_market_cap(market_data.get('raw_df'))
+    us_cap = DataCollector.get_us_market_cap()
+    
+    china_cap_str = f"{china_cap}" if china_cap else "N/A"
+    us_cap_str = f"{us_cap}" if us_cap else "N/A"
+    
+    buffett_cn = round((china_cap / settings.CHINA_GDP_2025) * 100, 2) if china_cap else "N/A"
+    buffett_us = round((us_cap / settings.US_GDP_2025) * 100, 2) if us_cap else "N/A"
+    
+    # 估值状态判断
+    if isinstance(buffett_cn, float):
+        if buffett_cn < settings.CHINA_BUFFETT_VERY_LOW:
+            china_status = "历史极度低估"
+        elif buffett_cn < settings.CHINA_BUFFETT_LOW:
+            china_status = "合理"
+        else:
+            china_status = "偏高"
+    else:
+        china_status = "N/A"
+    
+    if isinstance(buffett_us, float):
+        if buffett_us < settings.US_BUFFETT_REASONABLE:
+            us_status = "合理估值"
+        elif buffett_us < settings.US_BUFFETT_HIGH:
+            us_status = "偏高"
+        else:
+            us_status = "显著高估"
+    else:
+        us_status = "N/A"
+    
+    buffett_cn_str = f"{buffett_cn}%" if isinstance(buffett_cn, float) else buffett_cn
+    buffett_us_str = f"{buffett_us}%" if isinstance(buffett_us, float) else buffett_us
+    
+    print(f"📊 巴菲特指标 - 中国: {buffett_cn_str}, 美国: {buffett_us_str}")
+
     # 3. 构造 AI 输入并获取分析
     stock_insights = prepare_stock_insights(market_data['raw_df'])
     
@@ -126,7 +162,13 @@ def main():
         volume=market_data['volume'],
         ai_review=review_markdown,
         current_fx=current_fx,
-        current_oil=current_oil
+        current_oil=current_oil,
+        china_cap=china_cap_str,
+        us_cap=us_cap_str,
+        buffett_cn=buffett_cn_str,
+        buffett_us=buffett_us_str,
+        china_status=china_status,
+        us_status=us_status
     )
 
     # 5. 保存最终报告到 output

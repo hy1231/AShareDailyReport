@@ -43,6 +43,19 @@ GEMINI_PROXY = os.getenv("GEMINI_PROXY")
 os.environ["HTTP_PROXY"] = GEMINI_PROXY
 os.environ["HTTPS_PROXY"] = GEMINI_PROXY
 
+# GDP 基准数据 (单位：万亿)
+# 用于计算巴菲特指标 = 总市值 / GDP * 100%
+CHINA_GDP_2025 = 140.19  # 万亿元人民币 (2025年名义GDP)
+US_GDP_2025 = 30.77      # 万亿美元 (2025年名义GDP)
+
+# 巴菲特指标估值状态阈值
+# 中国A股阈值（由于大量核心资产在港股/美股上市，天然低于美股）
+CHINA_BUFFETT_VERY_LOW = 50   # 历史极度低估
+CHINA_BUFFETT_LOW = 75         # 偏高
+# 美股阈值（科技股和全球化中枢上移）
+US_BUFFETT_REASONABLE = 130    # 合理估值
+US_BUFFETT_HIGH = 170          # 显著高估
+
 # 业务逻辑常量
 # 绘图颜色方案 (统一在这里修改 UI 风格)
 REPORT_COLORS = {
