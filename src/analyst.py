@@ -46,6 +46,8 @@ class AIAnalyst:
         if market_data.get('macro'):
             fx = market_data['macro'].get('fx')
             oil = market_data['macro'].get('oil')
+            buffett = market_data['macro'].get('buffett')
+            
             if fx:
                 macro_section += f"""### 🌍 宏观环境观察
 - **美元兑离岸人民币 (USD/CNH)**：{fx['当前汇率']}，日变化 {fx['日变化']:+.4f}，近30日均值 {fx['近30日均值']}，趋势 {fx['趋势']}
@@ -53,8 +55,11 @@ class AIAnalyst:
             if oil:
                 macro_section += f"""- **布伦特原油**：${oil['当前油价']}/桶，日变化 ${oil['日变化']:+.2f}，近30日均值 ${oil['近30日均值']}，趋势 {oil['趋势']}
 """
-            if fx or oil:
-                macro_section += "\n> 请结合宏观环境，分析汇率和原油对市场情绪的影响。\n"
+            if buffett:
+                macro_section += f"""- **巴菲特指标**：中国A股 {buffett['buffett_cn']} ({buffett['china_status']})，美股 {buffett['buffett_us']} ({buffett['us_status']})
+"""
+            if fx or oil or buffett:
+                macro_section += "\n> 请结合宏观环境，分析汇率、原油和估值水位对市场情绪的影响。\n"
 
         prompt = f"""
 你是一位拥有 10 年经验的资深宏观策略分析师，风格冷静、客观，擅长透过数据表象看清资金本质。请结合以下【宏观、行业、个股】多维数据撰写 Markdown 复盘简报。
