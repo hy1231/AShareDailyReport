@@ -223,13 +223,21 @@ class DataCollector:
         close = fx_df['Close']
         current = close.iloc[-1]
         prev = close.iloc[-2] if len(close) > 1 else current
+        
+        # 当日趋势：相对于昨日收盘价
+        daily_trend = "走强" if current > prev else ("走弱" if current < prev else "持平")
+        
+        # 长期趋势：近30日趋势
+        long_term_trend = "升值" if current < close.iloc[-30] else "贬值"
+        
         return {
             "当前汇率": round(current, 4),
             "日变化": round(current - prev, 4),
             "近30日均值": round(close.mean(), 4),
             "近30日最高": round(close.max(), 4),
             "近30日最低": round(close.min(), 4),
-            "趋势": "升值" if current < close.iloc[-30] else "贬值"
+            "当日趋势": daily_trend,
+            "长期趋势": long_term_trend
         }
 
     @staticmethod
@@ -248,32 +256,114 @@ class DataCollector:
         }
     
     @staticmethod
+    def _stock_szse_summary(date: str):
+        """
+        深证证券交易所-总貌-证券类别统计
+        https://www.szse.cn/market/overview/index.html
+        """
+        import warnings
+        import io
+        
+        url = "http://www.szse.cn/api/report/ShowReport"
+        params = {
+            "SHOWTYPE": "xlsx",
+            "CATALOGID": "1803_sczm",
+            "TABKEY": "tab1",
+            "txtQueryDate": "-".join([date[:4], date[4:6], date[6:]]),
+            "random": "0.39339437497296137",
+        }
+        
+        r = requests.get(url, params=params)
+        
+        with warnings.catch_warnings(record=True):
+            warnings.simplefilter("always")
+            temp_df = pd.read_excel(io.BytesIO(r.content), engine="openpyxl")
+        
+        temp_df["证券类别"] = temp_df["证券类别"].astype(str).str.strip()
+        temp_df.iloc[:, 2:] = temp_df.iloc[:, 2:].map(lambda x: x.replace(",", "") if isinstance(x, str) else x)
+        temp_df.columns = ["证券类别", "数量", "成交金额", "总市值", "流通市值"]
+        
+        temp_df["数量"] = pd.to_numeric(temp_df["数量"], errors="coerce")
+        temp_df["成交金额"] = pd.to_numeric(temp_df["成交金额"], errors="coerce")
+        temp_df["总市值"] = pd.to_numeric(temp_df["总市值"], errors="coerce")
+        temp_df["流通市值"] = pd.to_numeric(temp_df["流通市值"], errors="coerce")
+        
+        return temp_df
+    
+    @staticmethod
     def calc_china_market_cap(raw_df):
-        """从已缓存的市场数据计算A股总市值（万亿元人民币）"""
+        """获取A股总市值（万亿元人民币）- 使用交易所官方数据"""
+        today = datetime.now().strftime("%Y-%m-%d")
+        cache_dir = os.path.join("data/cache", today)
+        cache_path = os.path.join(cache_dir, "china_market_cap.txt")
+        
+        # 检查缓存
+        if os.path.exists(cache_path):
+            print(f"� [Cache] 命中A股总市值缓存")
+            with open(cache_path, 'r', encoding='utf-8') as f:
+                return float(f.read().strip())
+        
         try:
-            if raw_df is None or raw_df.empty:
-                print("⚠️ 市场数据为空，无法计算总市值")
-                return None
+            print("🔍 正在获取A股市场概况...")
             
-            # 查找"总市值"列（单位：元）
-            if '总市值' not in raw_df.columns:
-                print(f"⚠️ 未找到'总市值'列，可用列: {raw_df.columns.tolist()}")
-                return None
+            yesterday = datetime.now() - timedelta(days=1)
+            yesterday_str = yesterday.strftime("%Y%m%d")
+            total_cap = 0.0
             
-            # 转换为万亿元（总市值单位是元，除以 1e12 得到万亿元）
-            total_cap = raw_df['总市值'].sum() / 1e12
-            total_cap = round(total_cap, 2)
-            print(f"📊 A股总市值: {total_cap} 万亿元")
-            return total_cap
+            # 1. 上海证券交易所股票数据总貌
+            try:
+                sse_df = ak.stock_sse_summary()
+                sse_cap = float(sse_df[sse_df['项目'] == '总市值']['股票'].values[0])
+                total_cap += sse_cap
+                print(f"📈 上交所市值: {sse_cap} 亿元")
+            except Exception as e:
+                print(f"获取上交所市值失败: {e}")
+            
+            # 2. 深圳证券交易所市场总貌
+            try:
+                szse_df = DataCollector._stock_szse_summary(date=yesterday_str)
+                szse_cap_yuan = float(szse_df[szse_df['证券类别'] == '股票']['总市值'].values[0])
+                total_cap += (szse_cap_yuan / 1e8)  # 元转亿元
+                print(f"📈 深交所市值: {szse_cap_yuan / 1e8:.2f} 亿元")
+            except Exception as e:
+                print(f"获取深交所市值失败: {e}")
+            
+            # 将亿元转换为万亿元
+            total_cap = round(total_cap / 10000, 2)
+            
+            if total_cap > 0:
+                print(f"📊 A股总市值: {total_cap} 万亿元")
+                # 保存缓存
+                if not os.path.exists(cache_dir):
+                    os.makedirs(cache_dir)
+                with open(cache_path, 'w', encoding='utf-8') as f:
+                    f.write(str(total_cap))
+                return total_cap
+            else:
+                print("⚠️ 获取总市值失败，使用预设参考值")
+                return 119.4  # 参考值
+            
         except Exception as e:
-            print(f"❌ 计算A股总市值失败: {e}")
-            return None
+            print(f"❌ 获取A股总市值失败: {e}")
+            return 119.4  # 参考值
+
     
     @staticmethod
     def get_us_market_cap():
         """获取美股全市场总市值（万亿美元）- 使用威尔希尔5000指数"""
+        today = datetime.now().strftime("%Y-%m-%d")
+        cache_dir = os.path.join("data/cache", today)
+        cache_path = os.path.join(cache_dir, "us_market_cap.txt")
+        
+        # 检查缓存
+        if os.path.exists(cache_path):
+            print(f"� [Cache] 命中美股总市值缓存")
+            with open(cache_path, 'r', encoding='utf-8') as f:
+                value = f.read().strip()
+                return float(value) if value != "None" else None
+        
         try:
-            print("🔍 [YFinance] 正在获取美股总市值 (Wilshire 5000)...")
+            print("�🔍 [YFinance] 正在获取美股总市值 (Wilshire 5000)...")
             ticker = yf.Ticker("^FTW5000")
             hist = ticker.history(period="1d")
             if hist is None or hist.empty:
@@ -285,6 +375,13 @@ class DataCollector:
             # 所以指数点数 / 1000 = 万亿美元市值
             total_cap = round(close_price / 1000.0, 2)
             print(f"📊 美股总市值: {total_cap} 万亿美元")
+            
+            # 保存缓存
+            if not os.path.exists(cache_dir):
+                os.makedirs(cache_dir)
+            with open(cache_path, 'w', encoding='utf-8') as f:
+                f.write(str(total_cap))
+            
             return total_cap
         except Exception as e:
             print(f"❌ 获取美股总市值失败: {e}")
