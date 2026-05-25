@@ -299,53 +299,61 @@ class DataCollector:
         
         # 检查缓存
         if os.path.exists(cache_path):
-            print(f"� [Cache] 命中A股总市值缓存")
+            print(f"📦 [Cache] 命中A股总市值缓存")
             with open(cache_path, 'r', encoding='utf-8') as f:
-                return float(f.read().strip())
+                value = f.read().strip()
+                return float(value) if value != "None" else None
         
         try:
             print("🔍 正在获取A股市场概况...")
             
             yesterday = datetime.now() - timedelta(days=1)
             yesterday_str = yesterday.strftime("%Y%m%d")
-            total_cap = 0.0
+            
+            sse_cap = None
+            szse_cap = None
             
             # 1. 上海证券交易所股票数据总貌
             try:
                 sse_df = ak.stock_sse_summary()
                 sse_cap = float(sse_df[sse_df['项目'] == '总市值']['股票'].values[0])
-                total_cap += sse_cap
                 print(f"📈 上交所市值: {sse_cap} 亿元")
             except Exception as e:
-                print(f"获取上交所市值失败: {e}")
+                print(f"❌ 获取上交所市值失败: {e}")
             
             # 2. 深圳证券交易所市场总貌
             try:
                 szse_df = DataCollector._stock_szse_summary(date=yesterday_str)
                 szse_cap_yuan = float(szse_df[szse_df['证券类别'] == '股票']['总市值'].values[0])
-                total_cap += (szse_cap_yuan / 1e8)  # 元转亿元
-                print(f"📈 深交所市值: {szse_cap_yuan / 1e8:.2f} 亿元")
+                szse_cap = szse_cap_yuan / 1e8  # 元转亿元
+                print(f"📈 深交所市值: {szse_cap:.2f} 亿元")
             except Exception as e:
-                print(f"获取深交所市值失败: {e}")
+                print(f"❌ 获取深交所市值失败: {e}")
             
-            # 将亿元转换为万亿元
-            total_cap = round(total_cap / 10000, 2)
-            
-            if total_cap > 0:
+            # 只有当两个交易所数据都成功获取时，才返回总市值
+            if sse_cap is not None and szse_cap is not None:
+                total_cap = round((sse_cap + szse_cap) / 10000, 2)  # 亿元转万亿元
                 print(f"📊 A股总市值: {total_cap} 万亿元")
+                
                 # 保存缓存
                 if not os.path.exists(cache_dir):
                     os.makedirs(cache_dir)
                 with open(cache_path, 'w', encoding='utf-8') as f:
                     f.write(str(total_cap))
+                
                 return total_cap
             else:
-                print("⚠️ 获取总市值失败，使用预设参考值")
-                return 119.4  # 参考值
+                print("⚠️ A股总市值数据不完整（上海或深圳接口失败）")
+                # 保存失败标记到缓存
+                if not os.path.exists(cache_dir):
+                    os.makedirs(cache_dir)
+                with open(cache_path, 'w', encoding='utf-8') as f:
+                    f.write("None")
+                return None
             
         except Exception as e:
             print(f"❌ 获取A股总市值失败: {e}")
-            return 119.4  # 参考值
+            return None
 
     
     @staticmethod
@@ -357,17 +365,23 @@ class DataCollector:
         
         # 检查缓存
         if os.path.exists(cache_path):
-            print(f"� [Cache] 命中美股总市值缓存")
+            print(f"📦 [Cache] 命中美股总市值缓存")
             with open(cache_path, 'r', encoding='utf-8') as f:
                 value = f.read().strip()
                 return float(value) if value != "None" else None
         
         try:
-            print("�🔍 [YFinance] 正在获取美股总市值 (Wilshire 5000)...")
+            print("🔍 [YFinance] 正在获取美股总市值 (Wilshire 5000)...")
             ticker = yf.Ticker("^FTW5000")
             hist = ticker.history(period="1d")
+            
             if hist is None or hist.empty:
                 print("⚠️ 美股指数数据为空")
+                # 保存失败标记到缓存
+                if not os.path.exists(cache_dir):
+                    os.makedirs(cache_dir)
+                with open(cache_path, 'w', encoding='utf-8') as f:
+                    f.write("None")
                 return None
             
             close_price = hist['Close'].iloc[-1]
@@ -385,4 +399,9 @@ class DataCollector:
             return total_cap
         except Exception as e:
             print(f"❌ 获取美股总市值失败: {e}")
+            # 保存失败标记到缓存
+            if not os.path.exists(cache_dir):
+                os.makedirs(cache_dir)
+            with open(cache_path, 'w', encoding='utf-8') as f:
+                f.write("None")
             return None
