@@ -55,10 +55,7 @@ class AIAnalyst:
             if oil:
                 macro_section += f"""- **布伦特原油**：${oil['当前油价']}/桶，日变化 ${oil['日变化']:+.2f}，近30日均值 ${oil['近30日均值']}，趋势 {oil['趋势']}
 """
-            if buffett:
-                macro_section += f"""- **巴菲特指标**：中国A股 {buffett['buffett_cn']} ({buffett['china_status']})，美股 {buffett['buffett_us']} ({buffett['us_status']})
-"""
-            if fx or oil or buffett:
+            if fx or oil:
                 macro_section += "\n> 请结合宏观环境，分析汇率、原油和估值水位对市场情绪的影响。\n"
 
         prompt = f"""
