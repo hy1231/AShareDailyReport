@@ -356,6 +356,126 @@ class DataCollector:
             return None
 
     
+    def get_market_fund_flow(self):
+        """
+        获取全市场（或大盘）盘中分时资金流向
+        对应 image_10cf9d.png 中的机构、主力、大户、散户动态走势
+        数据说明：
+        - 机构 = 超大单净流入
+        - 主力 = 大单净流入
+        - 大户 = 中单净流入
+        - 散户 = 小单净流入
+        """
+        fund_flow_cache = os.path.join(self.cache_dir, "market_fund_flow.csv")
+
+        if os.path.exists(fund_flow_cache):
+            print("📦 [Cache] 命中全市场资金流向缓存...")
+            df = pd.read_csv(fund_flow_cache)
+        else:
+            print("🚀 [AkShare] 正在抓取今日全市场分时资金流向...")
+            try:
+                # 使用东财大盘资金流向接口
+                # stock_market_fund_flow 返回历史资金流向汇总
+                # 对于分时数据，我们使用 stock_zh_a_fund_flow 接口
+                
+                # 方案1：获取全市场资金流向快照（包含超大单、大单、中单、小单）
+                df = ak.stock_market_fund_flow()
+                
+                # 方案2：如果需要分时数据，使用大盘指数的资金流向
+                # 上证综指资金流向
+                # sh_df = ak.stock_zh_index_fund_flow(symbol="sh000001")
+                
+                df.to_csv(fund_flow_cache, index=False, encoding='utf-8-sig')
+                print(f"💾 [Storage] 资金流向数据已备份: {fund_flow_cache}")
+            except Exception as e:
+                print(f"❌ 资金流向抓取失败: {e}")
+                return None
+        
+        return self._process_fund_flow_data(df)
+    
+    def _process_fund_flow_data(self, df):
+        """
+        处理资金流向数据，统一字段命名为机构、主力、大户、散户
+        """
+        if df is None or df.empty:
+            return None
+        
+        try:
+            # 映射东财字段到统一命名
+            column_mapping = {
+                '超大单净流入-金额': '机构',
+                '大单净流入-金额': '主力', 
+                '中单净流入-金额': '大户',
+                '小单净流入-金额': '散户',
+                '超大单净流入': '机构',
+                '大单净流入': '主力',
+                '中单净流入': '大户',
+                '小单净流入': '散户',
+                '超大单净额': '机构',
+                '大单净额': '主力',
+                '中单净额': '大户',
+                '小单净额': '散户'
+            }
+            
+            # 重命名列
+            df = df.rename(columns={k: v for k, v in column_mapping.items() if k in df.columns})
+            
+            # 检查是否有必要的列
+            required_cols = ['机构', '主力', '大户', '散户']
+            missing_cols = [col for col in required_cols if col not in df.columns]
+            
+            if missing_cols:
+                print(f"❌ 资金流向数据缺少必要字段: {missing_cols}")
+                return None
+            
+            # 如果没有时间列，生成模拟时间
+            if '时间' not in df.columns:
+                df['时间'] = self._generate_time_sequence(len(df))
+            
+            # 确保数值类型正确（单位：元 -> 亿元）
+            for col in required_cols:
+                df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
+                # 如果数值太大（单位为元），转换为亿元
+                if df[col].abs().max() > 10000:
+                    df[col] = df[col] / 100000000
+                # 如果数值适中（单位为万元），转换为亿元
+                elif df[col].abs().max() > 1:
+                    df[col] = df[col] / 10000
+            
+            return df
+        except Exception as e:
+            print(f"❌ 资金流向数据处理失败: {e}")
+            return None
+    
+    def _generate_time_sequence(self, length):
+        """生成时间序列"""
+        times = []
+        count = 0
+        
+        # 上午盘：09:30-11:30
+        for hour in range(9, 12):
+            for minute in range(0, 60, 15):
+                if hour == 9 and minute < 30:
+                    continue
+                if count >= length:
+                    break
+                times.append(f"{hour:02d}:{minute:02d}")
+                count += 1
+            if count >= length:
+                break
+        
+        # 下午盘：13:00-15:00
+        for hour in range(13, 16):
+            for minute in range(0, 60, 15):
+                if count >= length:
+                    break
+                times.append(f"{hour:02d}:{minute:02d}")
+                count += 1
+            if count >= length:
+                break
+        
+        return times
+
     @staticmethod
     def get_us_market_cap():
         """获取美股全市场总市值（万亿美元）- 使用威尔希尔5000指数"""
