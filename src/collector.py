@@ -396,29 +396,26 @@ class DataCollector:
     def _process_fund_flow_data(self, df):
         """
         处理资金流向数据，统一字段命名为机构、主力、大户、散户
+        适配 AkShare stock_market_fund_flow 返回的数据格式
+        - 只保留近一个月数据
+        - 精简列，只保留必要字段
         """
         if df is None or df.empty:
             return None
         
         try:
-            # 映射东财字段到统一命名
+            # 定义原始列名到目标列名的映射
+            # AkShare stock_market_fund_flow 返回的字段格式
             column_mapping = {
-                '超大单净流入-金额': '机构',
-                '大单净流入-金额': '主力', 
-                '中单净流入-金额': '大户',
-                '小单净流入-金额': '散户',
-                '超大单净流入': '机构',
-                '大单净流入': '主力',
-                '中单净流入': '大户',
-                '小单净流入': '散户',
-                '超大单净额': '机构',
-                '大单净额': '主力',
-                '中单净额': '大户',
-                '小单净额': '散户'
+                '超大单净流入-净额': '机构',      # 超大单 → 机构
+                '大单净流入-净额': '主力',        # 大单 → 主力
+                '中单净流入-净额': '大户',        # 中单 → 大户
+                '小单净流入-净额': '散户'         # 小单 → 散户
             }
             
-            # 重命名列
-            df = df.rename(columns={k: v for k, v in column_mapping.items() if k in df.columns})
+            # 只重命名存在的列（避免 KeyError）
+            cols_to_rename = {k: v for k, v in column_mapping.items() if k in df.columns}
+            df = df.rename(columns=cols_to_rename)
             
             # 检查是否有必要的列
             required_cols = ['机构', '主力', '大户', '散户']
@@ -428,19 +425,40 @@ class DataCollector:
                 print(f"❌ 资金流向数据缺少必要字段: {missing_cols}")
                 return None
             
-            # 如果没有时间列，生成模拟时间
-            if '时间' not in df.columns:
-                df['时间'] = self._generate_time_sequence(len(df))
+            # 确保日期/时间列存在
+            if '日期' not in df.columns and '时间' not in df.columns:
+                print("❌ 资金流向数据缺少日期/时间字段")
+                return None
+            
+            # 处理日期列：转换为datetime格式
+            if '日期' in df.columns:
+                df['日期'] = pd.to_datetime(df['日期'], errors='coerce')
+                df['时间'] = df['日期'].dt.strftime('%Y-%m-%d')
+            elif '时间' in df.columns:
+                df['时间'] = pd.to_datetime(df['时间'], errors='coerce').dt.strftime('%Y-%m-%d')
+            
+            # 筛选近一个月的数据
+            one_month_ago = pd.Timestamp.now() - pd.DateOffset(months=1)
+            df = df[df['日期'] >= one_month_ago] if '日期' in df.columns else df
             
             # 确保数值类型正确（单位：元 -> 亿元）
             for col in required_cols:
                 df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
                 # 如果数值太大（单位为元），转换为亿元
-                if df[col].abs().max() > 10000:
+                if df[col].abs().max() > 1000000:
                     df[col] = df[col] / 100000000
                 # 如果数值适中（单位为万元），转换为亿元
                 elif df[col].abs().max() > 1:
                     df[col] = df[col] / 10000
+            
+            # 只保留必要的列
+            output_cols = ['时间', '机构', '主力', '大户', '散户']
+            df = df[output_cols]
+            
+            # 保存精简后的数据到缓存
+            simplified_cache = os.path.join(self.cache_dir, "market_fund_flow_simplified.csv")
+            df.to_csv(simplified_cache, index=False, encoding='utf-8-sig')
+            print(f"💾 [Storage] 精简后的资金流向数据已缓存: {simplified_cache}")
             
             return df
         except Exception as e:

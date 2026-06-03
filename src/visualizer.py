@@ -104,9 +104,8 @@ class Visualizer:
     @staticmethod
     def generate_fund_flow_chart(df):
         """
-        根据分时数据，生成类似 image_10cf9d.png 的全市场资金流向图
-        假设 df 包含列：'时间' (09:30-15:00), '机构', '主力', '大户', '散户'
-        数据的数值单位通常为"元"，在画图时转换成"亿元"
+        生成全市场多日资金流向趋势图
+        数据格式：日期序列 + 机构、主力、大户、散户净流入（单位：亿元）
         """
         if df is None or df.empty:
             print("⚠️ [Visualizer] 资金流向数据为空，跳过图表生成。")
@@ -114,7 +113,7 @@ class Visualizer:
 
         fig = go.Figure()
 
-        # 1. 定义配色（尽量对齐 image_10cf9d.png 的视觉）
+        # 1. 定义配色（机构/主力/大户/散户）
         colors = {
             '机构': '#ff4d4f',  # 红色 - 超大单
             '主力': '#ffec3d',  # 黄色 - 大单
@@ -135,10 +134,10 @@ class Visualizer:
                     fill='none'
                 ))
 
-        # 3. 完美复刻暗黑主题样式
+        # 3. 暗黑主题样式（适合公众号展示）
         fig.update_layout(
             title=dict(
-                text="<b>全市场资金流向动态走势 (亿元)</b>",
+                text="<b>全市场资金流向趋势 (亿元)</b>",
                 font=dict(color='#ffffff', size=18, family="SimHei"),
                 x=0.5,
                 y=0.95
@@ -159,12 +158,11 @@ class Visualizer:
                 tickcolor='#8c8c8c',
                 tickfont=dict(color='#ffffff', size=12),
                 title=dict(
-                    text='时间',
+                    text='日期',
                     font=dict(color='#8c8c8c')
                 ),
-                # 强制显示关键时间节点
-                tickmode='array',
-                tickvals=['09:30', '10:30', '11:30', '13:00', '14:00', '15:00']
+                # 自动选择合适的日期显示
+                tickformat='%m-%d'
             ),
             yaxis=dict(
                 gridcolor='#262626',
@@ -179,23 +177,23 @@ class Visualizer:
             margin=dict(l=60, r=30, t=80, b=50)
         )
 
-        # 4. 仿照图片，在中午休盘 13:00 处加一条垂直虚线
-        fig.add_vline(x='13:00', line_width=2, line_dash="dash", line_color="#8c8c8c")
+        # 4. 在 y=0 处添加一条水平虚线（零轴）
+        fig.add_hline(y=0, line_width=1, line_dash="dash", line_color="#8c8c8c")
 
-        # 5. 添加最终数值标注（显示在图例旁边）
+        # 5. 添加最新数值标注
         final_values = []
         for role in ['机构', '主力', '大户', '散户']:
             if role in df.columns and len(df[role]) > 0:
                 final_val = df[role].iloc[-1]
                 final_values.append(f"{role}: {final_val:.1f}亿")
         
-        # 在图表上方添加最终数值
+        # 在图表上方添加最新数值
         fig.add_annotation(
             x=0.02,
             y=0.92,
             xref='paper',
             yref='paper',
-            text=' | '.join(final_values),
+            text='最新数据: ' + ' | '.join(final_values),
             showarrow=False,
             font=dict(color='#ffffff', size=12),
             align='left'
