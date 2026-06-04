@@ -66,9 +66,7 @@ def main():
     macro_data = collector.get_macro_data()
     rel_oil_path = ""
     rel_fx_path = ""
-    rel_fund_flow_path = ""
     current_fx = ""
-    fund_flow_summary = {}
     if macro_data:
         oil_fig = Visualizer.generate_line_chart(macro_data['oil'], "布伦特原油近期走势 (USD/桶)", "#cf1322")
         rel_oil_path = f"../data/cache/{date_str}/oil.png"
@@ -84,27 +82,6 @@ def main():
         current_oil = macro_data['current_oil']
     else:
         print("⚠️ 宏观数据获取失败，跳过图表生成")
-
-    # 4. 获取资金流向数据并生成走势图
-    fund_flow_df = collector.get_market_fund_flow()
-    if fund_flow_df is not None and not fund_flow_df.empty:
-        flow_fig = Visualizer.generate_fund_flow_chart(fund_flow_df)
-        if flow_fig:
-            flow_image_path = os.path.join(cache_dir, "fund_flow.png")
-            flow_fig.write_image(flow_image_path, scale=3)
-            rel_fund_flow_path = f"../data/cache/{date_str}/fund_flow.png"
-            print(f"📸 核心资金流向图已成功缓存！")
-            
-            # 提取资金流向最终数据用于 AI 分析
-            fund_flow_summary = {
-                "机构": round(fund_flow_df['机构'].iloc[-1], 1) if '机构' in fund_flow_df.columns else 0,
-                "主力": round(fund_flow_df['主力'].iloc[-1], 1) if '主力' in fund_flow_df.columns else 0,
-                "大户": round(fund_flow_df['大户'].iloc[-1], 1) if '大户' in fund_flow_df.columns else 0,
-                "散户": round(fund_flow_df['散户'].iloc[-1], 1) if '散户' in fund_flow_df.columns else 0
-            }
-            print(f"💰 资金流向最终数据: {fund_flow_summary}")
-    else:
-        print("⚠️ 资金流向数据获取失败，跳过图表生成")
 
     # 3. 构造 AI 输入并获取分析
     stock_insights = prepare_stock_insights(market_data['raw_df'])
@@ -158,7 +135,6 @@ def main():
         "down": market_data['down'],
         "volume": market_data['volume'],
         "stock_insights": stock_insights,
-        "fund_flow": fund_flow_summary,
         "macro": {
             "fx": fx_stats,
             "oil": oil_stats,
@@ -200,9 +176,7 @@ def main():
         buffett_cn=buffett_cn_str,
         buffett_us=buffett_us_str,
         china_status=china_status,
-        us_status=us_status,
-        fund_flow_path=rel_fund_flow_path,
-        **fund_flow_summary
+        us_status=us_status
     )
 
     # 5. 保存最终报告到 output
