@@ -67,6 +67,7 @@ def main():
     rel_oil_path = ""
     rel_fx_path = ""
     current_fx = ""
+    current_oil = ""
     if macro_data:
         oil_fig = Visualizer.generate_line_chart(macro_data['oil'], "布伦特原油近期走势 (USD/桶)", "#cf1322")
         rel_oil_path = f"../data/cache/{date_str}/oil.png"
