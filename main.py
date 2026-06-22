@@ -82,7 +82,9 @@ def main():
         current_fx = macro_data['current_fx']
         current_oil = macro_data['current_oil']
     else:
-        print("⚠️ 宏观数据获取失败，跳过图表生成")
+        print("❌ 宏观数据获取失败（汇率/原油），终止报告生成")
+        print("💡 请检查网络连接或稍后重试")
+        return
 
     # 3. 构造 AI 输入并获取分析
     stock_insights = prepare_stock_insights(market_data['raw_df'])
